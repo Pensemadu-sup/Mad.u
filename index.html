@@ -12,10 +12,65 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;900&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=7">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 </head>
 <body>
+  <!--
+  ╔══════════════════════════════════════════════════════════════════════╗
+  ║  ÁREA EDITÁVEL — NOME E CAPA DOS PRODUTOS DO CATÁLOGO                ║
+  ╚══════════════════════════════════════════════════════════════════════╝
+  COMO FUNCIONA
+  • Todo arquivo .glb que existir no repositório vira um card sozinho
+    (nome provisório = nome do arquivo, sem capa).
+  • Para dar nome e capa a um produto, copie uma linha da lista abaixo e
+    troque os textos entre aspas:
+        modelo : nome do arquivo .glb (caminho a partir da raiz do repositório)
+        nome   : nome que aparece no card
+        linha  : a linha do produto. Use um destes códigos (exatamente assim):
+                 extra-385  extra-550  express  expand  one-560  one-740  two-460  two-640  box  set
+                 Deixe "" se ainda não souber: o produto aparece só em "Todos".
+        capa   : imagem do card (ex.: "capas/produto.jpg"). Deixe "" para usar o ícone.
+  • Para a capa: suba a imagem na pasta "capas" do repositório (JPG, PNG ou WEBP, ~800 px).
+  • Para ESCONDER um .glb do catálogo: coloque o caminho dele em "esconder".
+  • Trocou o arquivo .glb por outro com o mesmo nome? Aumente a "versao" (2, 3...) do produto.
+  -->
+  <script>
+    window.CATALOGO = {
+      // ----- PRODUTOS (um por linha) -----
+      produtos: [
+        { modelo: "produto.glb", nome: "Produto MAD.U", linha: "", capa: "", versao: "1" },
+        // { modelo: "novo-produto.glb", nome: "Nome do novo produto", linha: "one-740", capa: "capas/novo-produto.jpg" },
+      ],
+
+      // ----- LINHAS (aparecem como botões ao lado de "Todos", na ordem abaixo) -----
+      // Para criar uma linha nova: copie uma linha desta lista (id sem espaço/acento e minúsculo).
+      categorias: [
+        { id: "extra-385", rotulo: "Extra 385" },
+        { id: "extra-550", rotulo: "Extra 550" },
+        { id: "express",   rotulo: "Express" },
+        { id: "expand",    rotulo: "Expand" },
+        { id: "one-560",   rotulo: "One 560" },
+        { id: "one-740",   rotulo: "One 740" },
+        { id: "two-460",   rotulo: "Two 460" },
+        { id: "two-640",   rotulo: "Two 640" },
+        { id: "box",       rotulo: "Box" },
+        { id: "set",       rotulo: "Set" }
+      ],
+
+      // ----- ESCONDER do catálogo (.glb que existem no repositório mas não devem aparecer) -----
+      esconder: [],
+
+      // ----- DESCOBERTA AUTOMÁTICA de .glb (não precisa mexer) -----
+      repositorio: "Pensemadu-sup/Mad.u",
+      branch: "main",
+      ignorarPastas: ["public/", "node_modules/"],
+      descobrirAutomaticamente: true,
+
+      site: { titulo: "Catálogo MAD.U", url: "https://www.pensemadu.com.br/" }
+    };
+  </script>
+
   <a class="skip" href="#catalogo">Ir para o catálogo</a>
 
   <!-- VISTA 1: CATÁLOGO -->
@@ -67,8 +122,7 @@
     </div>
   </section>
 
-  <script src="js/config.js?v=4"></script>
-  <script src="js/catalog.js?v=4"></script>
-  <script type="module" src="js/viewer.js?v=4"></script>
+  <script src="js/config.js?v=7"></script>
+  <script type="module" src="js/viewer.js?v=7"></script>
 </body>
 </html>
