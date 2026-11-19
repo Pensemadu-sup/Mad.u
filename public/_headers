@@ -1,0 +1,7 @@
+/models/*
+  Cache-Control: public, max-age=3600, must-revalidate
+  Access-Control-Allow-Origin: *
+/js/*
+  Cache-Control: public, max-age=300, must-revalidate
+/css/*
+  Cache-Control: public, max-age=300, must-revalidate
