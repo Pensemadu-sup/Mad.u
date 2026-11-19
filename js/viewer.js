@@ -125,9 +125,9 @@ function criarCard(p) {
     img.alt = "";
     img.loading = "lazy";
     img.decoding = "async";
-    img.addEventListener("error", () => img.remove());   // capa não encontrada: fica o ícone
-    img.addEventListener("load", () => media.querySelector("svg") && media.querySelector("svg").remove());
+    img.addEventListener("error", () => { img.remove(); media.classList.remove("tem-capa"); });   // capa não encontrada: fica o ícone
     img.src = cod(p.capa);
+    media.classList.add("tem-capa");
     media.appendChild(img);
   }
 
