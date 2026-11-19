@@ -1,7 +1,7 @@
 window.VIEWER_CONFIG = {
   titulo: "MAD.U",
   subtitulo: "Visualização 3D",
-  modelo: "/Mad.u/produto.glb",
+  modelo: "produto.glb",
   descricao: "Modelo 3D interativo do produto",
   anguloInicial: [48, 74],
   campoDeVisao: 30,
