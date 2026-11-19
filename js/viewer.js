@@ -12,7 +12,38 @@ const PADRAO = {
   bibliotecas: ["https://cdn.jsdelivr.net/npm/@google/model-viewer@4.0.0/dist/model-viewer.min.js"]
 };
 const cfg = Object.assign({}, PADRAO, window.VIEWER_CONFIG || {});
-const cat = Object.assign({ site: {}, categorias: [], produtos: [] }, window.CATALOGO || {});
+const cat = Object.assign({ site: {}, categorias: [], produtos: [], esconder: [], ignorarPastas: ["public/", "node_modules/"], branch: "main", descobrirAutomaticamente: true }, window.CATALOGO || {});
+
+/* ---------- Produtos: lista do index.html + .glb descobertos no repositório ---------- */
+const embelezar = (arq) => arq.split("/").pop().replace(/\.glb$/i, "").replace(/[-_]+/g, " ").trim().replace(/(^|\s)\S/g, (m) => m.toUpperCase());
+const slug = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const cod = (s) => { try { return encodeURI(decodeURI(s)); } catch (e) { return s; } };
+function normalizar(p) {
+  const nome = (p.nome || "").trim() || embelezar(p.modelo);
+  return { id: p.id || slug(p.modelo.replace(/\.glb$/i, "")) || "produto", nome, modelo: cod(p.modelo), arquivo: p.modelo, capa: (p.capa || "").trim(), categoria: p.linha || p.categoria || "", versao: p.versao || "1", descricao: p.descricao || "Modelo 3D de " + nome };
+}
+let produtos = cat.produtos.filter((p) => p && p.modelo).map(normalizar);
+
+async function descobrirGlb() {
+  if (!cat.descobrirAutomaticamente || !cat.repositorio) return [];
+  const chave = `madu-arvore:${cat.repositorio}@${cat.branch}`;
+  let paths = null;
+  try { const c = JSON.parse(sessionStorage.getItem(chave) || "null"); if (c && Date.now() - c.t < 600000) paths = c.paths; } catch (e) {}
+  if (!paths) {
+    const r = await comTempo(fetch(`https://api.github.com/repos/${cat.repositorio}/git/trees/${encodeURIComponent(cat.branch)}?recursive=1`, { headers: { Accept: "application/vnd.github+json" } }), 10000);
+    if (!r.ok) throw new Error("GitHub respondeu " + r.status);
+    const d = await r.json();
+    if (d.truncated) console.warn("Lista de arquivos do GitHub veio incompleta");
+    paths = (d.tree || []).filter((n) => n.type === "blob" && /\.glb$/i.test(n.path)).map((n) => n.path);
+    try { sessionStorage.setItem(chave, JSON.stringify({ t: Date.now(), paths })); } catch (e) {}
+  }
+  const baixo = (s) => s.toLowerCase();
+  const jaTem = new Set(produtos.map((p) => baixo(p.arquivo)));
+  const escondidos = new Set((cat.esconder || []).map(baixo));
+  return paths
+    .filter((x) => !cat.ignorarPastas.some((f) => baixo(x).startsWith(baixo(f))) && !escondidos.has(baixo(x)) && !jaTem.has(baixo(x)))
+    .map((x) => normalizar({ modelo: x }));
+}
 
 const $ = (id) => document.getElementById(id);
 const stage = $("stage"), mv = $("viewer"), loader = $("loader"), vistaCatalogo = $("viewCatalogo");
@@ -89,6 +120,16 @@ function criarCard(p) {
   media.className = "card__media";
   media.setAttribute("aria-hidden", "true");
   media.innerHTML = ICONE_CUBO;   // texto fixo do próprio código, sem dados externos
+  if (p.capa) {
+    const img = document.createElement("img");
+    img.alt = "";
+    img.loading = "lazy";
+    img.decoding = "async";
+    img.addEventListener("error", () => img.remove());   // capa não encontrada: fica o ícone
+    img.addEventListener("load", () => media.querySelector("svg") && media.querySelector("svg").remove());
+    img.src = cod(p.capa);
+    media.appendChild(img);
+  }
 
   const nome = document.createElement("span");
   nome.className = "card__nome";
@@ -119,7 +160,7 @@ function criarCard(p) {
 }
 
 function renderGrade() {
-  const lista = cat.produtos.filter((p) => filtro === "todos" || p.categoria === filtro);
+  const lista = produtos.filter((p) => filtro === "todos" || p.categoria === filtro);
   const grade = $("grade");
   grade.textContent = "";
   for (const p of lista) grade.appendChild(criarCard(p));
@@ -281,7 +322,7 @@ $("btnVoltar").addEventListener("click", voltar);
 $("btnVoltarErro").addEventListener("click", voltar);
 window.addEventListener("popstate", (e) => {
   const id = e.state && e.state.produto;
-  const p = id && cat.produtos.find((x) => x.id === id);
+  const p = id && produtos.find((x) => x.id === id);
   if (p) abrir(p, { empurrar: false }); else if (atual) fechar();
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && atual && !fsEl()) voltar(); });
@@ -293,3 +334,11 @@ document.title = tituloPagina;
 if (location.hash) history.replaceState(null, "", location.pathname + location.search);
 criarFiltros();
 renderGrade();
+// Procura outros .glb no repositório e acrescenta um card para cada um. Se falhar, ficam só os da lista.
+descobrirGlb().then((novos) => {
+  if (!novos.length) return;
+  const ids = new Set(produtos.map((p) => p.id));
+  for (const n of novos) { let id = n.id, i = 2; while (ids.has(id)) id = n.id + "-" + i++; n.id = id; ids.add(id); }
+  produtos = produtos.concat(novos);
+  renderGrade();
+}).catch((e) => console.warn("Não foi possível procurar novos .glb:", e));
