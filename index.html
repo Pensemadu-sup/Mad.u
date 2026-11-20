@@ -17,6 +17,55 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;900&display=swap">
   <link rel="stylesheet" href="css/style.css?v=8">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+  <style>
+    .drawer-hint {
+      position: absolute;
+      z-index: 3;
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom, 0px) + 142px);
+      transform: translate(-50%, 8px);
+      margin: 0;
+      padding: 10px 17px;
+      max-width: calc(100% - 32px);
+      border: 1px solid rgba(255,255,255,.62);
+      border-radius: 999px;
+      background: rgba(35, 25, 55, .88);
+      color: #fff;
+      box-shadow: 0 8px 26px rgba(25, 16, 43, .18);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      font: 600 .78rem/1.35 Poppins, sans-serif;
+      letter-spacing: .01em;
+      text-align: center;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .24s ease, transform .24s ease;
+    }
+    .drawer-hint::before {
+      content: "";
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      margin: 0 9px 1px 0;
+      border-radius: 50%;
+      background: #f39a35;
+      box-shadow: 0 0 0 3px rgba(243,154,53,.18);
+      vertical-align: middle;
+    }
+    .drawer-hint.is-visible {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .drawer-hint { bottom: calc(env(safe-area-inset-bottom, 0px) + 142px); }
+    }
+    @media (max-height: 420px) and (orientation: landscape) {
+      .drawer-hint { bottom: 18px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .drawer-hint { transition: none; }
+    }
+  </style>
 </head>
 <body>
   <!--
@@ -54,7 +103,7 @@
         { id: "set", rotulo: "Set" }
       ],
 
-      esconder: [],
+      esconder: ["AnimadinhosOne1.1glb.glb"],
       repositorio: "Pensemadu-sup/Mad.u",
       branch: "main",
       ignorarPastas: ["public/", "node_modules/"],
@@ -93,6 +142,7 @@
     </div>
     <div class="loader" id="loader" role="status" aria-live="polite"><div class="loader__box"><span class="loader__label" id="loaderLabel">Carregando</span><span class="loader__bar"><i id="loaderFill"></i></span></div></div>
     <p class="hint" id="hint" hidden></p>
+    <p class="drawer-hint" id="drawerHint" hidden>Toque na gaveta para abrir</p>
     <nav class="controls" id="controls" aria-label="Controles do visualizador" hidden>
       <button type="button" id="btnZoomOut" aria-label="Afastar" title="Afastar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
       <button type="button" id="btnZoomIn" aria-label="Aproximar" title="Aproximar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -114,6 +164,6 @@
 
   <script src="js/config.js?v=8"></script>
   <script type="module" src="js/viewer.js?v=8"></script>
-  <script src="js/animacao.js?v=1"></script>
+  <script src="js/animacao.js?v=2"></script>
 </body>
 </html>
