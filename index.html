@@ -37,6 +37,7 @@
       font: 600 .78rem/1.35 Poppins, sans-serif;
       letter-spacing: .01em;
       text-align: center;
+      white-space: nowrap;
       pointer-events: none;
       opacity: 0;
       transition: opacity .24s ease, transform .24s ease;
@@ -56,8 +57,17 @@
       opacity: 1;
       transform: translate(-50%, 0);
     }
-    @media (hover: hover) and (pointer: fine) {
-      .drawer-hint { bottom: calc(env(safe-area-inset-bottom, 0px) + 142px); }
+    .drawer-hint__desktop { display: inline; }
+    .drawer-hint__mobile { display: none; }
+    @media (max-width: 600px) {
+      .drawer-hint {
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 142px);
+        padding: 9px 13px;
+        font-size: .72rem;
+        max-width: calc(100% - 24px);
+      }
+      .drawer-hint__desktop { display: none; }
+      .drawer-hint__mobile { display: inline; }
     }
     @media (max-height: 420px) and (orientation: landscape) {
       .drawer-hint { bottom: 18px; }
@@ -142,7 +152,10 @@
     </div>
     <div class="loader" id="loader" role="status" aria-live="polite"><div class="loader__box"><span class="loader__label" id="loaderLabel">Carregando</span><span class="loader__bar"><i id="loaderFill"></i></span></div></div>
     <p class="hint" id="hint" hidden></p>
-    <p class="drawer-hint" id="drawerHint" hidden>Toque na gaveta para abrir</p>
+    <p class="drawer-hint" id="drawerHint" hidden>
+      <span class="drawer-hint__desktop">Clique na primeira gaveta para abrir ou fechar</span>
+      <span class="drawer-hint__mobile">Toque na primeira gaveta para abrir ou fechar</span>
+    </p>
     <nav class="controls" id="controls" aria-label="Controles do visualizador" hidden>
       <button type="button" id="btnZoomOut" aria-label="Afastar" title="Afastar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
       <button type="button" id="btnZoomIn" aria-label="Aproximar" title="Aproximar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
@@ -164,6 +177,6 @@
 
   <script src="js/config.js?v=8"></script>
   <script type="module" src="js/viewer.js?v=8"></script>
-  <script src="js/animacao.js?v=2"></script>
+  <script src="js/animacao.js?v=3"></script>
 </body>
 </html>
