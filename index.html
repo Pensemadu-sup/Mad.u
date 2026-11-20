@@ -40,30 +40,21 @@
   -->
   <script>
     window.CATALOGO = {
-      // ----- PRODUTOS (um por linha) -----
       produtos: [
         { modelo: "produto.glb", nome: "Express MADU000689.22.22", linha: "express", capa: "public/EXPRESS_690_ANGULADO_INOX CINZA.webp", versao: "1" },
-        { modelo: "AnimadinhosOne1.0-compressed (1).glb", nome: "One 560", linha: "one", capa: "public/", versao: "1" },
-
-        // { modelo: "novo-produto.glb", nome: "Nome do novo produto", linha: "one", capa: "capas/novo-produto.jpg" },
       ],
 
-      // ----- LINHAS (aparecem como botões ao lado de "Todos", na ordem abaixo) -----
-      // Para criar uma linha nova: copie uma linha desta lista (id sem espaço/acento e minúsculo).
       categorias: [
         { id: "extra", rotulo: "Extra" },
-        { id: "express",   rotulo: "Express" },
-        { id: "expand",    rotulo: "Expand" },
-        { id: "one",   rotulo: "One" },
-        { id: "two",   rotulo: "Two" },
-        { id: "box",       rotulo: "Box" },
-        { id: "set",       rotulo: "Set" }
+        { id: "express", rotulo: "Express" },
+        { id: "expand", rotulo: "Expand" },
+        { id: "one", rotulo: "One" },
+        { id: "two", rotulo: "Two" },
+        { id: "box", rotulo: "Box" },
+        { id: "set", rotulo: "Set" }
       ],
 
-      // ----- ESCONDER do catálogo (.glb que existem no repositório mas não devem aparecer) -----
       esconder: [],
-
-      // ----- DESCOBERTA AUTOMÁTICA de .glb (não precisa mexer) -----
       repositorio: "Pensemadu-sup/Mad.u",
       branch: "main",
       ignorarPastas: ["public/", "node_modules/"],
@@ -75,11 +66,9 @@
 
   <a class="skip" href="#catalogo">Ir para o catálogo</a>
 
-  <!-- VISTA 1: CATÁLOGO -->
   <div id="viewCatalogo">
     <header class="topo">
       <div class="topo__in">
-        <!-- Provisório: trocar pelo arquivo oficial do logo (ex.: <img src="assets/logo.svg" alt="MAD.U">) -->
         <a class="marca" href="https://www.pensemadu.com.br/" aria-label="MAD.U — ir para o site">MAD.U</a>
         <a class="topo__link" href="https://www.pensemadu.com.br/">Voltar ao site</a>
       </div>
@@ -96,7 +85,6 @@
     </main>
   </div>
 
-  <!-- VISTA 2: VISUALIZADOR (só abre ao clicar em um produto; o modelo só baixa nesse momento) -->
   <section class="stage" id="stage" hidden aria-label="Visualizador 3D">
     <model-viewer id="viewer" camera-controls disable-tap interaction-prompt="none" environment-image="neutral" tone-mapping="neutral" shadow-intensity="0.9" shadow-softness="1" exposure="1.15" loading="eager" reveal="auto" alt="Modelo 3D interativo do produto"></model-viewer>
     <div class="viewer-top">
@@ -126,5 +114,6 @@
 
   <script src="js/config.js?v=8"></script>
   <script type="module" src="js/viewer.js?v=8"></script>
+  <script src="js/animacao.js?v=1"></script>
 </body>
 </html>
