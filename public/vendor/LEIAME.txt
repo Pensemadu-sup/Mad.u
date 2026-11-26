@@ -1,1 +1,0 @@
-Coloque aqui (opcional) model-viewer.min.js para funcionar sem CDN. Veja o README.
