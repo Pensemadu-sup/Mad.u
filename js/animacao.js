@@ -20,7 +20,14 @@
   ------------------------------------------------------------------ */
   const SO_PARTES_ANIMADAS = false;
 
-  const PADRAO = { fracaoAberta: 1 };
+  /* Folga (em segundos) antes do último instante da animação.
+   Se o tempo chegar exatamente ao fim, o model-viewer volta ao começo
+   e a gaveta "fecha sozinha". Parar um pouquinho antes evita o loop. */
+const FOLGA = 0.02;
+
+  /* fracaoAberta null = descobrir sozinho o instante em que o produto está
+     mais "aberto" (maior afastamento da posição inicial). */
+  const PADRAO = { fracaoAberta: null };
 
   const EXCECOES = [
     { arquivo: /AnimadinhosOne1\.1\.glb$/i, fracaoAberta: 65 / 110 }
@@ -29,6 +36,7 @@
   let nomeAnimacao = null;
   let estado = "indisponivel";
   let meshesAnimadas = new Set();
+  let abertoEm = null;
 
   let quadroRAF = 0;
   let token = 0;
@@ -117,11 +125,122 @@
     return encontrados;
   }
 
+  /* Acha, nos dados da animação, o instante em que as peças estão mais
+     afastadas da posição inicial. Serve para animações que abrem e depois
+     voltam a fechar dentro do mesmo clipe. Devolve segundos ou null. */
+  function pontoAbertoDe(J, dv, bin) {
+    const anim = (J.animations || [])[0];
+    if (!anim) return null;
+
+    const NCOMP = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4 };
+
+    function ler(i) {
+      const a = (J.accessors || [])[i];
+      if (!a || a.sparse || a.componentType !== 5126 || a.bufferView === undefined) return null;
+      const bv = J.bufferViews[a.bufferView];
+      const n = NCOMP[a.type];
+      if (!bv || !n) return null;
+      const passo = bv.byteStride || n * 4;
+      const ini = bin + (bv.byteOffset || 0) + (a.byteOffset || 0);
+      const linhas = [];
+      for (let k = 0; k < a.count; k++) {
+        const l = [];
+        for (let c = 0; c < n; c++) l.push(dv.getFloat32(ini + k * passo + c * 4, true));
+        linhas.push(l);
+      }
+      return linhas;
+    }
+
+    const canais = [];
+
+    (anim.channels || []).forEach(ch => {
+      const alvo = ch.target || {};
+      if (alvo.path !== "translation" && alvo.path !== "rotation" && alvo.path !== "scale") return;
+
+      const sp = (anim.samplers || [])[ch.sampler];
+      if (!sp) return;
+
+      const tempos = ler(sp.input);
+      let valores = ler(sp.output);
+      if (!tempos || !valores) return;
+
+      if (sp.interpolation === "CUBICSPLINE") {
+        valores = valores.filter((_, i) => i % 3 === 1);
+      }
+      if (valores.length !== tempos.length || valores.length < 2) return;
+
+      const t = tempos.map(l => l[0]);
+      const v0 = valores[0];
+
+      const dev = valores.map(v => {
+        if (alvo.path === "rotation") {
+          const d = Math.abs(v.reduce((s, x, i) => s + x * v0[i], 0));
+          return 1 - Math.min(1, d);
+        }
+        return Math.hypot(...v.map((x, i) => x - v0[i]));
+      });
+
+      const maior = Math.max(...dev);
+      if (maior < 1e-6) return;
+
+      canais.push({ t, dev: dev.map(d => d / maior) });
+    });
+
+    if (!canais.length) return null;
+
+    function devEm(c, tempo) {
+      const { t, dev } = c;
+      if (tempo <= t[0]) return dev[0];
+      if (tempo >= t[t.length - 1]) return dev[dev.length - 1];
+      let i = 1;
+      while (i < t.length && t[i] < tempo) i++;
+      const f = (tempo - t[i - 1]) / ((t[i] - t[i - 1]) || 1);
+      return dev[i - 1] + (dev[i] - dev[i - 1]) * f;
+    }
+
+    const candidatos = [...new Set(canais.flatMap(c => c.t.map(x => Math.round(x * 10000) / 10000)))].sort((a, b) => a - b);
+
+    const pontuacao = candidatos.map(tempo => canais.reduce((s, c) => s + devEm(c, tempo), 0));
+    const maximo = Math.max(...pontuacao);
+
+    if (!(maximo > 0)) return null;
+
+    // O primeiro instante em que já está (quase) todo aberto.
+    for (let i = 0; i < candidatos.length; i++) {
+      if (pontuacao[i] >= maximo * 0.985) return candidatos[i];
+    }
+
+    return null;
+  }
+
+  async function descobrirPontoAberto(gltf) {
+    const src = viewer.src;
+    const resp = await fetch(src);
+    const buf = await resp.arrayBuffer();
+    const dv = new DataView(buf);
+
+    if (dv.byteLength < 20 || dv.getUint32(0, true) !== 0x46546C67) return null;
+
+    let pos = 12;
+    let bin = null;
+
+    while (pos + 8 <= buf.byteLength) {
+      const tam = dv.getUint32(pos, true);
+      if (dv.getUint32(pos + 4, true) === 0x004E4942) { bin = pos + 8; break; }
+      pos += 8 + tam;
+    }
+
+    if (bin === null) return null;
+
+    return pontoAbertoDe(gltf, dv, bin);
+  }
+
   function preparar() {
     pararMovimento();
 
     nomeAnimacao = null;
     meshesAnimadas = new Set();
+    abertoEm = null;
     estado = "indisponivel";
 
     const gltf = viewer.originalGltfJson;
@@ -129,6 +248,7 @@
 
     nomeAnimacao = animacoes.length ? animacoes[0] : null;
 
+    viewer.autoplay = false;
     viewer.pause();
 
     if (!nomeAnimacao) {
@@ -162,6 +282,21 @@
 
     mostrarDica();
 
+    const srcAtual = viewer.src;
+
+    descobrirPontoAberto(gltf)
+      .then(t => {
+        if (viewer.src !== srcAtual || t === null) return;
+        abertoEm = t;
+        console.info(
+          "[MAD.U] Ponto totalmente aberto: " + t.toFixed(2) +
+          " s de " + (Number(viewer.duration) || 0).toFixed(2) + " s"
+        );
+      })
+      .catch(err => {
+        console.warn("[MAD.U] Não consegui descobrir o ponto aberto; usando o fim da animação.", err);
+      });
+
     console.info(
       "[MAD.U] Animação pronta: " + nomeAnimacao +
       " (" + (Number(viewer.duration) || 0).toFixed(2) + " s)"
@@ -175,7 +310,7 @@
 
     if (!duracao) return;
 
-    const alvo = Math.max(0, Math.min(duracao, destino));
+    const alvo = Math.max(0, Math.min(duracao - FOLGA, destino));
 
     const inicio = Number(viewer.currentTime) || 0;
     const diferenca = alvo - inicio;
@@ -233,7 +368,15 @@
     const config = configAtual();
 
     if (estado === "fechada" || estado === "fechando") {
-      moverPara(duracao * config.fracaoAberta, "aberta");
+      let destino = duracao;
+
+      if (typeof config.fracaoAberta === "number") {
+        destino = duracao * config.fracaoAberta;
+      } else if (abertoEm !== null) {
+        destino = abertoEm;
+      }
+
+      moverPara(destino, "aberta");
     } else {
       moverPara(0, "fechada");
     }
@@ -312,6 +455,11 @@
   viewer.addEventListener("pointercancel", finalizarPonteiro, { passive: true });
 
   viewer.addEventListener("click", aoClicar);
+
+  // Se algo tentar tocar a animação sozinha (autoplay, outro script), pausa de novo.
+  viewer.addEventListener("play", () => {
+    if (nomeAnimacao && estado !== "indisponivel") viewer.pause();
+  });
 
   viewer.addEventListener("load", preparar);
 
