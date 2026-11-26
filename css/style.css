@@ -225,3 +225,9 @@ html[data-tema="escuro"] .controls button:hover { background: rgba(255, 255, 255
 html[data-tema="escuro"] .controls button:active { background: rgba(255, 255, 255, .2); }
 html[data-tema="escuro"] .loader__bar { background: rgba(255, 255, 255, .16); }
 html[data-tema="escuro"] .drawer-hint { background: rgba(58, 58, 62, .9); border-color: rgba(255, 255, 255, .2); }
+
+/* Botão de tema dentro do visualizador 3D */
+.tema--viewer { flex: 0 0 auto; margin-left: auto; width: 44px; height: 44px; border: 1px solid var(--glass-line); background: var(--glass); -webkit-backdrop-filter: blur(20px) saturate(1.6); backdrop-filter: blur(20px) saturate(1.6); box-shadow: var(--shadow); }
+.tema--viewer:hover { background: #fff; }
+html[data-tema="escuro"] .tema--viewer { background: var(--glass); }
+html[data-tema="escuro"] .tema--viewer:hover { background: #2c2c2e; }
