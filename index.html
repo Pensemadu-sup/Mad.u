@@ -52,9 +52,7 @@
   <script>
     window.CATALOGO = {
       produtos: [
-        { modelo: "produto.glb", nome: "Estante Prateleira - MADU000689.22.22", linha: "express", capa: "images/EXPRESS_690_ANGULADO_INOX CINZA.webp", versao: "1" },
-        { modelo: "AnimadinhosOne1.1.glb", nome: "Carrinho Hospitalar - MADU000191.01.01", linha: "one", capa: "images/madu191.webp", versao: "1" },
-        { modelo: "Extra animation original final-1anim.glb", nome: "Carrinho Sedação - COMBO09-0500", linha: "extra", capa: "images/rendediladinho.png", versao: "1" },
+        { modelo: "produto.glb", nome: "Express MADU000689.22.22", linha: "express", capa: "public/EXPRESS_690_ANGULADO_INOX CINZA.webp", versao: "1" },
       ],
 
       categorias: [
@@ -101,7 +99,7 @@
       <div class="hero">
         <p class="hero__eyebrow">Catálogo em 3D</p>
         <h1 id="tituloCatalogo">Catálogo MAD.U</h1>
-        <p class="hero__sub">Gire, aproxime e explore cada detalhe dos produtos. Toque na gaveta para vê-la abrir.</p>
+        <p class="hero__sub">Gire, aproxime e explore cada detalhe dos produtos. Nos modelos com movimento, toque no produto para abrir e toque de novo para fechar.</p>
       </div>
       <p class="sr-only" id="contagem" role="status" aria-live="polite"></p>
       <ul class="grade" id="grade"></ul>
@@ -128,8 +126,8 @@
     <div class="loader" id="loader" role="status" aria-live="polite"><div class="loader__box"><span class="loader__label" id="loaderLabel">Carregando</span><span class="loader__bar"><i id="loaderFill"></i></span></div></div>
     <p class="hint" id="hint" hidden></p>
     <p class="drawer-hint" id="drawerHint" hidden>
-      <span class="drawer-hint__desktop">Clique na gaveta para abrir ou fechar</span>
-      <span class="drawer-hint__mobile">Toque na gaveta para abrir ou fechar</span>
+      <span class="drawer-hint__desktop">Clique no produto para abrir ou fechar</span>
+      <span class="drawer-hint__mobile">Toque no produto para abrir ou fechar</span>
     </p>
     <nav class="controls" id="controls" aria-label="Controles do visualizador" hidden>
       <button type="button" id="btnZoomOut" aria-label="Afastar" title="Afastar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
@@ -176,6 +174,6 @@
   </script>
   <script src="js/config.js?v=8"></script>
   <script type="module" src="js/viewer.js?v=8"></script>
-  <script src="js/animacao.js?v=4"></script>
+  <script src="js/animacao.js?v=5"></script>
 </body>
 </html>
