@@ -15,67 +15,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;900&display=swap">
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
   <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-  <style>
-    .drawer-hint {
-      position: absolute;
-      z-index: 3;
-      left: 50%;
-      bottom: calc(env(safe-area-inset-bottom, 0px) + 142px);
-      transform: translate(-50%, 8px);
-      margin: 0;
-      padding: 10px 17px;
-      max-width: calc(100% - 32px);
-      border: 1px solid rgba(255,255,255,.62);
-      border-radius: 999px;
-      background: rgba(35, 25, 55, .88);
-      color: #fff;
-      box-shadow: 0 8px 26px rgba(25, 16, 43, .18);
-      -webkit-backdrop-filter: blur(12px);
-      backdrop-filter: blur(12px);
-      font: 600 .78rem/1.35 Poppins, sans-serif;
-      letter-spacing: .01em;
-      text-align: center;
-      white-space: nowrap;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity .24s ease, transform .24s ease;
-    }
-    .drawer-hint::before {
-      content: "";
-      display: inline-block;
-      width: 7px;
-      height: 7px;
-      margin: 0 9px 1px 0;
-      border-radius: 50%;
-      background: #f39a35;
-      box-shadow: 0 0 0 3px rgba(243,154,53,.18);
-      vertical-align: middle;
-    }
-    .drawer-hint.is-visible {
-      opacity: 1;
-      transform: translate(-50%, 0);
-    }
-    .drawer-hint__desktop { display: inline; }
-    .drawer-hint__mobile { display: none; }
-    @media (max-width: 600px) {
-      .drawer-hint {
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 142px);
-        padding: 9px 13px;
-        font-size: .72rem;
-        max-width: calc(100% - 24px);
-      }
-      .drawer-hint__desktop { display: none; }
-      .drawer-hint__mobile { display: inline; }
-    }
-    @media (max-height: 420px) and (orientation: landscape) {
-      .drawer-hint { bottom: 18px; }
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .drawer-hint { transition: none; }
-    }
-  </style>
 </head>
 <body>
   <!--
@@ -136,12 +77,20 @@
       <div class="filtros" id="filtros" role="group" aria-label="Filtrar produtos"></div>
     </div>
     <main class="pagina" id="catalogo" tabindex="-1">
-      <h1 id="tituloCatalogo">Catálogo MAD.U</h1>
+      <div class="hero">
+        <p class="hero__eyebrow">Experiência 3D</p>
+        <h1 id="tituloCatalogo">Catálogo MAD.U</h1>
+        <p class="hero__sub">Gire, aproxime e explore cada detalhe dos nossos produtos. Toque na gaveta para vê-la abrir.</p>
+      </div>
       <p class="sr-only" id="contagem" role="status" aria-live="polite"></p>
       <ul class="grade" id="grade"></ul>
       <p class="vazio" id="vazio" hidden>Nenhum produto neste filtro.</p>
       <noscript><p class="vazio">Ative o JavaScript do navegador para ver o catálogo em 3D.</p></noscript>
     </main>
+    <footer class="rodape">
+      <span>© MAD.U</span>
+      <a href="https://www.pensemadu.com.br/">pensemadu.com.br</a>
+    </footer>
   </div>
 
   <section class="stage" id="stage" hidden aria-label="Visualizador 3D">
@@ -153,8 +102,8 @@
     <div class="loader" id="loader" role="status" aria-live="polite"><div class="loader__box"><span class="loader__label" id="loaderLabel">Carregando</span><span class="loader__bar"><i id="loaderFill"></i></span></div></div>
     <p class="hint" id="hint" hidden></p>
     <p class="drawer-hint" id="drawerHint" hidden>
-      <span class="drawer-hint__desktop">Clique na primeira gaveta para abrir ou fechar</span>
-      <span class="drawer-hint__mobile">Toque na primeira gaveta para abrir ou fechar</span>
+      <span class="drawer-hint__desktop">Clique na gaveta para abrir ou fechar</span>
+      <span class="drawer-hint__mobile">Toque na gaveta para abrir ou fechar</span>
     </p>
     <nav class="controls" id="controls" aria-label="Controles do visualizador" hidden>
       <button type="button" id="btnZoomOut" aria-label="Afastar" title="Afastar"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
@@ -177,6 +126,6 @@
 
   <script src="js/config.js?v=8"></script>
   <script type="module" src="js/viewer.js?v=8"></script>
-  <script src="js/animacao.js?v=3"></script>
+  <script src="js/animacao.js?v=4"></script>
 </body>
 </html>
