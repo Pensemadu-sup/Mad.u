@@ -1,4 +1,5 @@
-/* MAD.U — clique na gaveta para abrir / fechar (model-viewer) */
+/* MAD.U — clique no produto para abrir; outro clique faz o contrário (model-viewer).
+   Vale para qualquer .glb que tenha animação. */
 (() => {
   "use strict";
 
@@ -8,30 +9,26 @@
   if (!viewer) return;
 
   /* ------------------------------------------------------------------
-     MODELOS COM GAVETA INTERATIVA
-     arquivo      : trecho do nome do .glb (expressão regular, sem diferenciar
-                    maiúsculas de minúsculas; espaços e %20 são tratados)
-     raiz         : nomes dos nós do modelo que fazem parte da gaveta
-     fracaoAberta : ponto da animação em que a gaveta está toda aberta
-                    (0 a 1; 1 = no fim da animação)
-     Para ligar outro modelo, copie uma linha e ajuste.
+     AJUSTES
+     SO_PARTES_ANIMADAS:
+       false = clicar em qualquer parte do produto abre/fecha (padrão)
+       true  = só clicar nas peças que se movem abre/fecha
+     EXCECOES (opcional): modelos que precisam de um ponto "aberto"
+       diferente do fim da animação.
+       arquivo      : trecho do nome do .glb (expressão regular)
+       fracaoAberta : 0 a 1 (1 = fim da animação)
   ------------------------------------------------------------------ */
-  const MODELOS = [
-    {
-      arquivo: /AnimadinhosOne1\.1\.glb$/i,
-      raiz: /^gaveta$/i,
-      fracaoAberta: 65 / 110
-    },
-    {
-      arquivo: /extra[\s_-]*animation/i,
-      raiz: /gaveta|puxador|bucha|acabamento/i,
-      fracaoAberta: 1
-    }
+  const SO_PARTES_ANIMADAS = false;
+
+  const PADRAO = { fracaoAberta: 1 };
+
+  const EXCECOES = [
+    { arquivo: /AnimadinhosOne1\.1\.glb$/i, fracaoAberta: 65 / 110 }
   ];
 
   let nomeAnimacao = null;
   let estado = "indisponivel";
-  let meshesGaveta = new Set();
+  let meshesAnimadas = new Set();
 
   let quadroRAF = 0;
   let token = 0;
@@ -44,9 +41,7 @@
     const src = viewer.getAttribute("src") || "";
 
     try {
-      return decodeURIComponent(
-        new URL(src, document.baseURI).pathname
-      );
+      return decodeURIComponent(new URL(src, document.baseURI).pathname);
     } catch (_) {
       return src.split("?")[0];
     }
@@ -54,15 +49,11 @@
 
   function configAtual() {
     const caminho = caminhoAtual();
-    return MODELOS.find(m => m.arquivo.test(caminho)) || null;
-  }
-
-  function modeloAlvoAtivo() {
-    return !!configAtual();
+    return EXCECOES.find(m => m.arquivo.test(caminho)) || PADRAO;
   }
 
   function mostrarDica() {
-    if (!hint || !modeloAlvoAtivo() || !meshesGaveta.size) return;
+    if (!hint) return;
 
     hint.hidden = false;
 
@@ -88,19 +79,21 @@
     quadroRAF = 0;
   }
 
-  function coletarMeshesDaGaveta(gltf, regexRaiz) {
-    const nodes =
-      gltf && Array.isArray(gltf.nodes) ? gltf.nodes : [];
+  /* Descobre quais malhas pertencem às peças que a animação mexe. */
+  function coletarMeshesAnimadas(gltf, indiceAnimacao) {
+    const nodes = gltf && Array.isArray(gltf.nodes) ? gltf.nodes : [];
+    const anims = gltf && Array.isArray(gltf.animations) ? gltf.animations : [];
+    const anim = anims[indiceAnimacao] || anims[0];
 
-    const raizes = [];
+    if (!anim) return new Set();
 
-    nodes.forEach((n, i) => {
-      if (regexRaiz.test(String(n.name || "").trim())) {
-        raizes.push(i);
+    const raizes = new Set();
+
+    (anim.channels || []).forEach(c => {
+      if (c && c.target && Number.isInteger(c.target.node)) {
+        raizes.add(c.target.node);
       }
     });
-
-    if (!raizes.length) return new Set();
 
     const encontrados = new Set();
     const visitados = new Set();
@@ -128,52 +121,38 @@
     pararMovimento();
 
     nomeAnimacao = null;
-    meshesGaveta = new Set();
+    meshesAnimadas = new Set();
     estado = "indisponivel";
 
-    const config = configAtual();
-
-    if (!config) {
-      esconderDica();
-      return;
-    }
-
     const gltf = viewer.originalGltfJson;
-
-    meshesGaveta = coletarMeshesDaGaveta(gltf, config.raiz);
-
     const animacoes = viewer.availableAnimations || [];
 
     nomeAnimacao = animacoes.length ? animacoes[0] : null;
+
+    viewer.pause();
+
+    if (!nomeAnimacao) {
+      esconderDica();
+      return;
+    }
 
     if (animacoes.length > 1) {
       console.warn(
         "[MAD.U] O modelo tem " + animacoes.length +
         " animações, mas só a primeira é usada: " + nomeAnimacao +
-        ". Exporte do Blender com 'Ações ativas combinadas' para sair um clipe só.",
+        ". Junte as animações em um clipe só.",
         animacoes
       );
     }
 
-    viewer.pause();
+    if (SO_PARTES_ANIMADAS) {
+      meshesAnimadas = coletarMeshesAnimadas(gltf, 0);
 
-    if (!nomeAnimacao || !meshesGaveta.size) {
-      const nomesDosNos = ((gltf && gltf.nodes) || [])
-        .map(n => n.name)
-        .filter(Boolean)
-        .slice(0, 60);
-
-      console.warn(
-        "[MAD.U] Não foi possível preparar a interação da gaveta.",
-        {
-          animacoes,
-          meshesGaveta: [...meshesGaveta],
-          nomesDosNos
-        }
-      );
-
-      esconderDica();
-      return;
+      if (!meshesAnimadas.size) {
+        console.warn(
+          "[MAD.U] Não achei as peças animadas; vou aceitar clique em qualquer parte do produto."
+        );
+      }
     }
 
     viewer.animationName = nomeAnimacao;
@@ -184,13 +163,13 @@
     mostrarDica();
 
     console.info(
-      "[MAD.U] Gaveta identificada. Malhas:",
-      [...meshesGaveta]
+      "[MAD.U] Animação pronta: " + nomeAnimacao +
+      " (" + (Number(viewer.duration) || 0).toFixed(2) + " s)"
     );
   }
 
   function moverPara(destino, estadoFinal) {
-    if (!nomeAnimacao || !viewer.loaded || !modeloAlvoAtivo()) return;
+    if (!nomeAnimacao || !viewer.loaded) return;
 
     const duracao = Number(viewer.duration) || 0;
 
@@ -226,10 +205,7 @@
         relogioInicial = agora;
       }
 
-      const progresso = Math.min(
-        1,
-        (agora - relogioInicial) / tempoTotal
-      );
+      const progresso = Math.min(1, (agora - relogioInicial) / tempoTotal);
 
       viewer.currentTime = inicio + diferenca * progresso;
 
@@ -245,14 +221,16 @@
     quadroRAF = requestAnimationFrame(animar);
   }
 
+  /* Um clique abre; o clique seguinte faz o contrário (fecha).
+     Se clicar no meio do movimento, ele inverte dali mesmo. */
   function alternar() {
-    const config = configAtual();
-
-    if (!viewer.loaded || !nomeAnimacao || !config) return;
+    if (!viewer.loaded || !nomeAnimacao) return;
 
     const duracao = Number(viewer.duration) || 0;
 
     if (!duracao) return;
+
+    const config = configAtual();
 
     if (estado === "fechada" || estado === "fechando") {
       moverPara(duracao * config.fracaoAberta, "aberta");
@@ -262,31 +240,28 @@
   }
 
   function aoClicar(evento) {
-    if (!modeloAlvoAtivo() || !nomeAnimacao || !meshesGaveta.size) return;
+    if (!nomeAnimacao || estado === "indisponivel") return;
 
     if (ignorarClique || arrastou) return;
 
     if (typeof viewer.surfaceFromPoint !== "function") return;
 
-    const superficie = viewer.surfaceFromPoint(
-      evento.clientX,
-      evento.clientY
-    );
+    const superficie = viewer.surfaceFromPoint(evento.clientX, evento.clientY);
 
     if (!superficie) return;
 
-    const indiceMalha = Number.parseInt(
-      String(superficie).trim().split(/\s+/)[0],
-      10
-    );
+    if (SO_PARTES_ANIMADAS && meshesAnimadas.size) {
+      const indiceMalha = Number.parseInt(
+        String(superficie).trim().split(/\s+/)[0],
+        10
+      );
 
-    if (!Number.isInteger(indiceMalha) || !meshesGaveta.has(indiceMalha)) {
-      return;
+      if (!Number.isInteger(indiceMalha) || !meshesAnimadas.has(indiceMalha)) {
+        return;
+      }
     }
 
     alternar();
-
-    // A instrução permanece visível para o cliente.
   }
 
   // Detecta arrasto sem interferir nos controles da câmera.
