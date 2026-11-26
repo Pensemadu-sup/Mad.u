@@ -1,4 +1,4 @@
-/* MAD.U — interação exclusiva com a primeira gaveta do Animadinhos One */
+/* MAD.U — clique na gaveta para abrir / fechar (model-viewer) */
 (() => {
   "use strict";
 
@@ -7,8 +7,27 @@
 
   if (!viewer) return;
 
-  const ARQUIVO_ALVO = "AnimadinhosOne1.1.glb";
-  const FRACAO_ABERTA = 65 / 110;
+  /* ------------------------------------------------------------------
+     MODELOS COM GAVETA INTERATIVA
+     arquivo      : trecho do nome do .glb (expressão regular, sem diferenciar
+                    maiúsculas de minúsculas; espaços e %20 são tratados)
+     raiz         : nomes dos nós do modelo que fazem parte da gaveta
+     fracaoAberta : ponto da animação em que a gaveta está toda aberta
+                    (0 a 1; 1 = no fim da animação)
+     Para ligar outro modelo, copie uma linha e ajuste.
+  ------------------------------------------------------------------ */
+  const MODELOS = [
+    {
+      arquivo: /AnimadinhosOne1\.1\.glb$/i,
+      raiz: /^gaveta$/i,
+      fracaoAberta: 65 / 110
+    },
+    {
+      arquivo: /extra[\s_-]*animation/i,
+      raiz: /gaveta|puxador|bucha|acabamento/i,
+      fracaoAberta: 1
+    }
+  ];
 
   let nomeAnimacao = null;
   let estado = "indisponivel";
@@ -21,27 +40,29 @@
   let ponteiroAtivo = null;
   let ignorarClique = false;
 
-  function modeloAlvoAtivo() {
+  function caminhoAtual() {
     const src = viewer.getAttribute("src") || "";
 
     try {
-      const caminho = new URL(src, document.baseURI).pathname;
-
-      return (
-        caminho.endsWith("/" + ARQUIVO_ALVO) ||
-        caminho === ARQUIVO_ALVO
+      return decodeURIComponent(
+        new URL(src, document.baseURI).pathname
       );
     } catch (_) {
-      return src.split("?")[0].endsWith(ARQUIVO_ALVO);
+      return src.split("?")[0];
     }
   }
 
+  function configAtual() {
+    const caminho = caminhoAtual();
+    return MODELOS.find(m => m.arquivo.test(caminho)) || null;
+  }
+
+  function modeloAlvoAtivo() {
+    return !!configAtual();
+  }
+
   function mostrarDica() {
-    if (
-      !hint ||
-      !modeloAlvoAtivo() ||
-      !meshesGaveta.size
-    ) return;
+    if (!hint || !modeloAlvoAtivo() || !meshesGaveta.size) return;
 
     hint.hidden = false;
 
@@ -67,29 +88,25 @@
     quadroRAF = 0;
   }
 
-  function coletarMeshesDaGaveta(gltf) {
+  function coletarMeshesDaGaveta(gltf, regexRaiz) {
     const nodes =
-      gltf && Array.isArray(gltf.nodes)
-        ? gltf.nodes
-        : [];
+      gltf && Array.isArray(gltf.nodes) ? gltf.nodes : [];
 
-    const raiz = nodes.findIndex(
-      n =>
-        String(n.name || "")
-          .trim()
-          .toLowerCase() === "gaveta"
-    );
+    const raizes = [];
 
-    if (raiz < 0) return new Set();
+    nodes.forEach((n, i) => {
+      if (regexRaiz.test(String(n.name || "").trim())) {
+        raizes.push(i);
+      }
+    });
+
+    if (!raizes.length) return new Set();
 
     const encontrados = new Set();
     const visitados = new Set();
 
     function percorrer(indice) {
-      if (
-        visitados.has(indice) ||
-        !nodes[indice]
-      ) return;
+      if (visitados.has(indice) || !nodes[indice]) return;
 
       visitados.add(indice);
 
@@ -102,7 +119,7 @@
       (no.children || []).forEach(percorrer);
     }
 
-    percorrer(raiz);
+    raizes.forEach(percorrer);
 
     return encontrados;
   }
@@ -114,32 +131,44 @@
     meshesGaveta = new Set();
     estado = "indisponivel";
 
-    if (!modeloAlvoAtivo()) {
+    const config = configAtual();
+
+    if (!config) {
       esconderDica();
       return;
     }
 
     const gltf = viewer.originalGltfJson;
 
-    meshesGaveta = coletarMeshesDaGaveta(gltf);
+    meshesGaveta = coletarMeshesDaGaveta(gltf, config.raiz);
 
     const animacoes = viewer.availableAnimations || [];
 
-    nomeAnimacao = animacoes.length
-      ? animacoes[0]
-      : null;
+    nomeAnimacao = animacoes.length ? animacoes[0] : null;
+
+    if (animacoes.length > 1) {
+      console.warn(
+        "[MAD.U] O modelo tem " + animacoes.length +
+        " animações, mas só a primeira é usada: " + nomeAnimacao +
+        ". Exporte do Blender com 'Ações ativas combinadas' para sair um clipe só.",
+        animacoes
+      );
+    }
 
     viewer.pause();
 
-    if (
-      !nomeAnimacao ||
-      !meshesGaveta.size
-    ) {
+    if (!nomeAnimacao || !meshesGaveta.size) {
+      const nomesDosNos = ((gltf && gltf.nodes) || [])
+        .map(n => n.name)
+        .filter(Boolean)
+        .slice(0, 60);
+
       console.warn(
         "[MAD.U] Não foi possível preparar a interação da gaveta.",
         {
           animacoes,
-          meshesGaveta: [...meshesGaveta]
+          meshesGaveta: [...meshesGaveta],
+          nomesDosNos
         }
       );
 
@@ -155,26 +184,19 @@
     mostrarDica();
 
     console.info(
-      "[MAD.U] Primeira gaveta identificada. Malhas:",
+      "[MAD.U] Gaveta identificada. Malhas:",
       [...meshesGaveta]
     );
   }
 
   function moverPara(destino, estadoFinal) {
-    if (
-      !nomeAnimacao ||
-      !viewer.loaded ||
-      !modeloAlvoAtivo()
-    ) return;
+    if (!nomeAnimacao || !viewer.loaded || !modeloAlvoAtivo()) return;
 
     const duracao = Number(viewer.duration) || 0;
 
     if (!duracao) return;
 
-    const alvo = Math.max(
-      0,
-      Math.min(duracao, destino)
-    );
+    const alvo = Math.max(0, Math.min(duracao, destino));
 
     const inicio = Number(viewer.currentTime) || 0;
     const diferenca = alvo - inicio;
@@ -191,10 +213,7 @@
       return;
     }
 
-    estado =
-      estadoFinal === "aberta"
-        ? "abrindo"
-        : "fechando";
+    estado = estadoFinal === "aberta" ? "abrindo" : "fechando";
 
     const tempoTotal = Math.abs(diferenca) * 1000;
 
@@ -212,8 +231,7 @@
         (agora - relogioInicial) / tempoTotal
       );
 
-      viewer.currentTime =
-        inicio + diferenca * progresso;
+      viewer.currentTime = inicio + diferenca * progresso;
 
       if (progresso < 1) {
         quadroRAF = requestAnimationFrame(animar);
@@ -228,41 +246,27 @@
   }
 
   function alternar() {
-    if (
-      !viewer.loaded ||
-      !nomeAnimacao ||
-      !modeloAlvoAtivo()
-    ) return;
+    const config = configAtual();
+
+    if (!viewer.loaded || !nomeAnimacao || !config) return;
 
     const duracao = Number(viewer.duration) || 0;
 
     if (!duracao) return;
 
-    if (
-      estado === "fechada" ||
-      estado === "fechando"
-    ) {
-      moverPara(
-        duracao * FRACAO_ABERTA,
-        "aberta"
-      );
+    if (estado === "fechada" || estado === "fechando") {
+      moverPara(duracao * config.fracaoAberta, "aberta");
     } else {
       moverPara(0, "fechada");
     }
   }
 
   function aoClicar(evento) {
-    if (
-      !modeloAlvoAtivo() ||
-      !nomeAnimacao ||
-      !meshesGaveta.size
-    ) return;
+    if (!modeloAlvoAtivo() || !nomeAnimacao || !meshesGaveta.size) return;
 
     if (ignorarClique || arrastou) return;
 
-    if (
-      typeof viewer.surfaceFromPoint !== "function"
-    ) return;
+    if (typeof viewer.surfaceFromPoint !== "function") return;
 
     const superficie = viewer.surfaceFromPoint(
       evento.clientX,
@@ -276,10 +280,9 @@
       10
     );
 
-    if (
-      !Number.isInteger(indiceMalha) ||
-      !meshesGaveta.has(indiceMalha)
-    ) return;
+    if (!Number.isInteger(indiceMalha) || !meshesGaveta.has(indiceMalha)) {
+      return;
+    }
 
     alternar();
 
@@ -305,16 +308,10 @@
   viewer.addEventListener(
     "pointermove",
     evento => {
-      if (
-        !ponteiroAtivo ||
-        evento.pointerId !== ponteiroAtivo.id
-      ) return;
+      if (!ponteiroAtivo || evento.pointerId !== ponteiroAtivo.id) return;
 
-      const dx =
-        evento.clientX - ponteiroAtivo.x;
-
-      const dy =
-        evento.clientY - ponteiroAtivo.y;
+      const dx = evento.clientX - ponteiroAtivo.x;
+      const dy = evento.clientY - ponteiroAtivo.y;
 
       if (Math.hypot(dx, dy) > 8) {
         arrastou = true;
@@ -324,10 +321,7 @@
   );
 
   function finalizarPonteiro(evento) {
-    if (
-      ponteiroAtivo &&
-      evento.pointerId === ponteiroAtivo.id
-    ) {
+    if (ponteiroAtivo && evento.pointerId === ponteiroAtivo.id) {
       ignorarClique = arrastou;
 
       ponteiroAtivo = null;
@@ -339,17 +333,8 @@
     }
   }
 
-  viewer.addEventListener(
-    "pointerup",
-    finalizarPonteiro,
-    { passive: true }
-  );
-
-  viewer.addEventListener(
-    "pointercancel",
-    finalizarPonteiro,
-    { passive: true }
-  );
+  viewer.addEventListener("pointerup", finalizarPonteiro, { passive: true });
+  viewer.addEventListener("pointercancel", finalizarPonteiro, { passive: true });
 
   viewer.addEventListener("click", aoClicar);
 
@@ -358,5 +343,4 @@
   if (viewer.loaded) {
     preparar();
   }
-
 })();
